@@ -37,19 +37,19 @@ impl Lox {
         let mut nodes = vec![];
         let mut line = vec![];
         let mut ends_with_newline = false;
-        const NEWLINE: u8 = 10;
 
         put(b"> ", &mut output)?;
-        while input.read_until(NEWLINE, &mut line)? > 0 {
-            ends_with_newline = *line.last().unwrap() == NEWLINE;
+        while input.read_until(b'\n', &mut line)? > 0 {
+            ends_with_newline = *line.last().unwrap() == b'\n';
             let mut continuation = false;
 
             for maybe_node in parser.iter_ast_nodes(&mut &line[..]) {
+                // NB: by contract, nothing can come from this iterator after error.
                 match maybe_node {
                     Ok(node) => nodes.push(node),
                     Err(LoxError(LoxErrorKind::UnexpectedEof, _)) => continuation = true,
                     Err(err) => {
-                        write!(errput, "{}", err.display_chain())?;
+                        writeln!(errput, "{}", err)?;
                         nodes.clear();
                     }
                 }
@@ -61,7 +61,7 @@ impl Lox {
                 for node in nodes.drain(..) {
                     let result = self.execute_node(&node, &mut output);
                     if let Err(err) = result {
-                        write!(errput, "{}", err.display_chain())?;
+                        writeln!(errput, "{}", err)?;
                         break;
                     }
                 }

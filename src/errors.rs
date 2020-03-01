@@ -9,11 +9,11 @@ error_chain! {
     errors {
         SyntaxError(desc: String) {
             description("invalid syntax")
-            display("invalid syntax: {}", desc)
+            display("SyntaxError: {}", desc)
         }
         UnexpectedEof {
             description("unexpected EOF")
-            display("unexpected EOF")
+            display("UnexpectedEof")
         }
     }
 
