@@ -1,15 +1,15 @@
-use rlox::{Lox, errors::*};
+use rlox::Lox;
 
 use structopt::StructOpt;
 use sysexit::Code;
 
-use std::{fs, io::{self, Write}, path::PathBuf, process::exit};
+use std::{fs, io, path::PathBuf, process::exit};
 
 #[derive(StructOpt)]
 struct Opt {
     /// Script path (if not present, run in interactive mode)
     #[structopt(parse(from_os_str))]
-    path: Option<PathBuf>
+    path: Option<PathBuf>,
 }
 
 fn run_file(mut lox: Lox, path: PathBuf) {
@@ -21,45 +21,24 @@ fn run_file(mut lox: Lox, path: PathBuf) {
             exit(Code::NoInput as i32);
         });
     let reader = io::BufReader::new(file);
-    let result = lox.execute(reader, io::stdout());
+    let result = lox.run(reader, io::stdout());
     if let Err(err) = result {
-        eprintln!("{}", err.display_chain());
+        eprintln!("{}", err);
+        exit(Code::DataErr as i32);
     }
 }
 
 fn run_interactive(mut lox: Lox) {
-    let mut line = String::new();
-    loop {
-        print!("> ");
-        if let Err(err) = io::stdout().flush() {
-            eprintln!("\nError flushing stdout: {}", err);
-            exit(Code::IoErr as i32);
-        }
-
-        match io::stdin().read_line(&mut line) {
-            Ok(n) => {
-                if n == 0 {
-                    println!();
-                    break;
-                }
-            },
-            Err(err) => {
-                eprintln!("\nFailed to read line: {}", err);
-                exit(Code::IoErr as i32);
-            }
-        }
-
-        let result = lox.execute(&mut line.as_bytes(), io::stdout());
-        if let Err(err) = result {
-            eprintln!("{}", err.display_chain());
-        }
-        line.clear();
+    let result = lox.run_interactive(io::stdin().lock(), io::stdout(), io::stderr());
+    if let Err(err) = result {
+        eprintln!("{}", err);
+        exit(Code::IoErr as i32);
     }
 }
 
 fn main() {
     let opt = Opt::from_args();
-    let lox = Lox::new();
+    let lox = Lox::default();
     if let Some(path) = opt.path {
         run_file(lox, path);
     } else {
